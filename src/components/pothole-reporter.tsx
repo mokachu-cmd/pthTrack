@@ -200,7 +200,7 @@ export function PotholeReporter() {
           <CardTitle className="text-2xl font-bold text-center text-primary">Pothole Tracker</CardTitle>
           {status !== 'success' && status !== 'locating' && status !== 'submitting' && (
             <CardDescription className="text-center">
-              Capture a pothole and we'll geotag it for you.
+              Capture a pothole with your location, and help us fix our roads!
             </CardDescription>
           )}
         </CardHeader>

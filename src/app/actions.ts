@@ -1,6 +1,9 @@
 'use server'
 
 import { z } from 'zod';
+import { db, storage } from '@/lib/firebase';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 const reportSchema = z.object({
   latitude: z.string(),
@@ -24,23 +27,33 @@ export async function uploadPotholeReport(formData: FormData) {
 
   const { image, latitude, longitude } = parsed.data;
 
-  // In a real application, you would upload the image to Firebase Storage
-  // and then save the image URL and location to Firestore or Realtime Database.
-  // For example:
-  // const storageRef = ref(storage, `potholes/${Date.now()}_${image.name}`);
-  // const uploadTask = await uploadBytes(storageRef, image);
-  // const imageUrl = await getDownloadURL(uploadTask.ref);
-  // await addDoc(collection(db, "potholes"), { imageUrl, latitude, longitude, reportedAt: serverTimestamp() });
+  try {
+    const storageRef = ref(storage, `potholes/${Date.now()}_${image.name}`);
+    
+    // Convert File to ArrayBuffer for upload
+    const imageBuffer = await image.arrayBuffer();
+    const uploadTask = await uploadBytes(storageRef, imageBuffer, {
+      contentType: image.type,
+    });
+    
+    const imageUrl = await getDownloadURL(uploadTask.ref);
 
-  console.log('Simulating upload for:', {
-    fileName: image.name,
-    fileSize: image.size,
-    latitude,
-    longitude,
-  });
+    await addDoc(collection(db, "potholes"), { 
+      imageUrl, 
+      latitude: parseFloat(latitude), 
+      longitude: parseFloat(longitude), 
+      reportedAt: serverTimestamp() 
+    });
 
-  // Simulate network delay for the upload process
-  await new Promise(res => setTimeout(res, 1500));
+    console.log('Report uploaded successfully:', {
+      imageUrl,
+      latitude,
+      longitude,
+    });
 
-  return { success: true };
+    return { success: true };
+  } catch (error) {
+    console.error('Firebase upload failed:', error);
+    return { error: 'Failed to submit report to Firebase.' };
+  }
 }

@@ -20,8 +20,8 @@ export function PotholeReporter() {
   const [status, setStatus] = useState<Status>('locating');
   const [location, setLocation] = useState<Location | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null); // This will hold the object URL for preview
+  const [imageDataUri, setImageDataUri] = useState<string | null>(null); // This will hold the data URI for upload
   const [isPending, startTransition] = useTransition();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -61,8 +61,17 @@ export function PotholeReporter() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setImageFile(file);
+      // Create a temporary URL for the image preview
       setImagePreview(URL.createObjectURL(file));
+
+      // Create a Base64 data URI for uploading
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUri = e.target?.result as string;
+        setImageDataUri(dataUri);
+      };
+      reader.readAsDataURL(file);
+
       setStatus('preview');
     }
   };
@@ -73,17 +82,17 @@ export function PotholeReporter() {
 
   const handleRetake = () => {
     if (imagePreview) URL.revokeObjectURL(imagePreview);
-    setImageFile(null);
+    setImageDataUri(null);
     setImagePreview(null);
     setStatus('idle');
     triggerCamera();
   }
   
   const handleSubmit = async () => {
-    if (!imageFile || !location) return;
+    if (!imageDataUri || !location) return;
 
     const formData = new FormData();
-    formData.append('image', imageFile);
+    formData.append('image', imageDataUri);
     formData.append('latitude', location.latitude.toString());
     formData.append('longitude', location.longitude.toString());
 
@@ -101,7 +110,7 @@ export function PotholeReporter() {
 
   const resetForm = () => {
     if (imagePreview) URL.revokeObjectURL(imagePreview);
-    setImageFile(null);
+    setImageDataUri(null);
     setImagePreview(null);
     setStatus('idle');
   }
@@ -155,7 +164,7 @@ export function PotholeReporter() {
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Retake
                 </Button>
-                <Button onClick={handleSubmit} disabled={isPending} style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--primary-foreground))' }} className="hover:opacity-90">
+                <Button onClick={handleSubmit} disabled={isPending || !imageDataUri} style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--primary-foreground))' }} className="hover:opacity-90">
                     {isPending ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (

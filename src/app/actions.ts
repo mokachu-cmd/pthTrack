@@ -1,14 +1,13 @@
 'use server'
 
 import { z } from 'zod';
-import { db, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 const reportSchema = z.object({
   latitude: z.string(),
   longitude: z.string(),
-  image: z.instanceof(File),
+  image: z.string(), // Changed from z.instanceof(File) to z.string()
 });
 
 export async function uploadPotholeReport(formData: FormData) {
@@ -28,25 +27,16 @@ export async function uploadPotholeReport(formData: FormData) {
   const { image, latitude, longitude } = parsed.data;
 
   try {
-    const storageRef = ref(storage, `potholes/${Date.now()}_${image.name}`);
-    
-    // Convert File to ArrayBuffer for upload
-    const imageBuffer = await image.arrayBuffer();
-    const uploadTask = await uploadBytes(storageRef, imageBuffer, {
-      contentType: image.type,
-    });
-    
-    const imageUrl = await getDownloadURL(uploadTask.ref);
-
+    // We are now storing the image as a Base64 data URI directly in Firestore
     await addDoc(collection(db, "potholes"), { 
-      imageUrl, 
+      imageUrl: image, // This is now the data URI
       latitude: parseFloat(latitude), 
       longitude: parseFloat(longitude), 
       reportedAt: serverTimestamp() 
     });
 
     console.log('Report uploaded successfully:', {
-      imageUrl,
+      imageUrl: 'Data URI stored',
       latitude,
       longitude,
     });

@@ -38,7 +38,7 @@ export function PotholeReporter() {
           setError(null);
         },
         (error) => {
-          console.error("Geolocation error:", error);
+          console.error("Geolocation error:", error.message, `(Code: ${error.code})`);
           setError("Could not get your location. Please enable location services and refresh the page.");
           setStatus('error');
         }
